@@ -169,9 +169,17 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
                 if (service != null) {
                     val characteristic = service.getCharacteristic(READ_CHAR_UUID)
                     if (characteristic != null) {
-                        // Read the characteristic
-                        val result = gatt.readCharacteristic(characteristic)
-                        Log.i(TAG, "Read characteristic initiated: $result")
+                        val properties = characteristic.properties
+//                        if ((properties and BluetoothGattCharacteristic.PROPERTY_READ) > 0) {
+//                            // Read the characteristic
+//                            val result = gatt.readCharacteristic(characteristic)
+//                            Log.w(TAG, "Read characteristic initiated: $result")
+//                        }
+                        if ((properties and BluetoothGattCharacteristic.PROPERTY_NOTIFY) > 0) {
+                            // Enable notifications
+                            enableNotifications(gatt, characteristic)
+                            Log.w(TAG, "test")
+                        }
                     } else {
                         Log.w(TAG, "Characteristic not found")
                     }
@@ -183,14 +191,58 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
+
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 val data = characteristic.value
-                Log.i(TAG, "Characteristic read: ${data?.let { String(it) }}")
+                Log.w(TAG, "Characteristic read: ${data?.let { String(it) }}")
                 receivedData.value = data?.let { String(it) } ?: "No Data"
             } else {
                 Log.w(TAG, "Characteristic read failed with status: $status")
             }
         }
+
+        override fun onCharacteristicChanged(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic
+        ) {
+            super.onCharacteristicChanged(gatt, characteristic)
+            val data = characteristic.value
+            val value = data[0].toInt()
+            val val_str = "$value"
+
+            Log.w(TAG, "Characteristic changed: ${val_str}}")
+            receivedData.value = val_str
+        }
+
+        override fun onDescriptorWrite(
+            gatt: BluetoothGatt,
+            descriptor: BluetoothGattDescriptor,
+            status: Int
+        ) {
+            super.onDescriptorWrite(gatt, descriptor, status)
+            if (status == BluetoothGatt.GATT_SUCCESS) {
+                Log.w(TAG, "Descriptor write successful for ${descriptor.characteristic.uuid}")
+            } else {
+                Log.w(TAG, "Descriptor write failed with status: $status")
+            }
+        }
     }
+
+    private fun enableNotifications(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
+        val cccdUuid = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+        val descriptor = characteristic.getDescriptor(cccdUuid)
+        if (descriptor != null) {
+            // Enable local notifications
+            gatt.setCharacteristicNotification(characteristic, true)
+
+            // Enable remote notifications
+            descriptor.value = BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+            gatt.writeDescriptor(descriptor)
+            Log.w(TAG, "Enabling notifications for ${characteristic.uuid}")
+        } else {
+            Log.w(TAG, "Descriptor $cccdUuid not found for characteristic ${characteristic.uuid}")
+        }
+    }
+
 }
