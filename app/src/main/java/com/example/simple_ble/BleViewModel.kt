@@ -178,14 +178,29 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
             Log.w(TAG, "Characteristic changed: $dataStr")
 
             if (dataStr != null) {
-                //_receivedData.value = dataStr
-                mainScope.launch {
-                    _receivedData.value = dataStr
-                    Log.d(TAG, "Updated _receivedData on main thread: ${_receivedData.value}")
+                try {
+                    // Decode the data into floats
+                    val decodedFloats = DataDecoder.decodeToFloats(dataStr)
+                    Log.d(TAG, "Decoded Floats: $decodedFloats")
+
+                    // Convert the floats into a displayable string
+                    val displayData = decodedFloats.joinToString(", ") { "%.2f".format(it) }
+
+                    // Update _receivedData with the decoded information
+                    mainScope.launch {
+                        _receivedData.value = displayData
+                        Log.d(TAG, "Updated _receivedData with decoded floats: $displayData")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error decoding data: ${e.message}")
+                    mainScope.launch {
+                        _receivedData.value = "Error decoding data: ${e.message}"
+                    }
                 }
-                Log.d(TAG, "Updated _receivedData to: ${_receivedData.value}")
             }
         }
+
+
 
 
         override fun onCharacteristicRead(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic, status: Int) {
