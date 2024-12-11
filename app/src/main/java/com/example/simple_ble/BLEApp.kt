@@ -1,10 +1,11 @@
-// BLEApp.kt (can be in the same file as MainActivity.kt or separate)
 package com.example.simple_ble
 
 import android.Manifest
 import android.bluetooth.BluetoothDevice
 import android.content.pm.PackageManager
 import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -12,15 +13,19 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 
 @Composable
 fun BLEApp(bleViewModel: BleViewModel) {
     val context = LocalContext.current
+
+    // Collect StateFlow values
+    val isScanning by bleViewModel.isScanning.collectAsState()
+    val scanResults by bleViewModel.scanResults.collectAsState()
+    val isConnected by bleViewModel.isConnected.collectAsState()
+    val receivedData by bleViewModel.receivedData.collectAsState()
 
     // Request location permission
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -29,7 +34,6 @@ fun BLEApp(bleViewModel: BleViewModel) {
             if (granted) {
                 bleViewModel.startScan()
             } else {
-                // Handle permission denial
                 Log.e("BLEApp", "Location permission denied.")
             }
         }
@@ -49,23 +53,35 @@ fun BLEApp(bleViewModel: BleViewModel) {
         }
     }
 
+    // Navigate to DataDisplayActivity when data is received
+    LaunchedEffect(receivedData) {
+        receivedData?.let { data ->
+            val intent = android.content.Intent(context, DataDisplayActivity::class.java)
+            intent.putExtra("RECEIVED_DATA", data)
+            context.startActivity(intent)
+        }
+    }
+
     // UI Components
-    Column(modifier = Modifier
-        .padding(16.dp)
-        .fillMaxSize()
+    Column(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxSize()
     ) {
-        if (bleViewModel.isScanning.value) { // Access .value
+        // Scanning status
+        if (isScanning) {
             Text(text = "Scanning for BLE devices...", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
         } else {
-            if (bleViewModel.scanResults.isNotEmpty()) { // Access .value
+            // Display scanned devices or a message if none found
+            if (scanResults.isNotEmpty()) {
                 Text(text = "Discovered Devices:", style = MaterialTheme.typography.headlineMedium)
                 Spacer(modifier = Modifier.height(8.dp))
                 LazyColumn(
                     modifier = Modifier.weight(1f)
                 ) {
-                    items(bleViewModel.scanResults) { scannedDevice -> // Access .value
+                    items(scanResults) { scannedDevice ->
                         DeviceItem(device = scannedDevice.device, rssi = scannedDevice.rssi) {
                             bleViewModel.connectToDevice(scannedDevice.device)
                         }
@@ -73,17 +89,13 @@ fun BLEApp(bleViewModel: BleViewModel) {
                     }
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = {
-                    bleViewModel.startScan()
-                }) {
+                Button(onClick = { bleViewModel.startScan() }) {
                     Text("Rescan")
                 }
             } else {
                 Text(text = "No devices found.", style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(8.dp))
-                Button(onClick = {
-                    bleViewModel.startScan()
-                }) {
+                Button(onClick = { bleViewModel.startScan() }) {
                     Text("Start Scanning")
                 }
             }
@@ -91,11 +103,12 @@ fun BLEApp(bleViewModel: BleViewModel) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        if (bleViewModel.isConnected.value) { // Access .value
+        // Connection and received data
+        if (isConnected) {
             Text(text = "Connected to device.", style = MaterialTheme.typography.bodyLarge)
             Spacer(modifier = Modifier.height(8.dp))
-            if (bleViewModel.receivedData.value != null) { // Access .value
-                Text(text = "Received Data: ${bleViewModel.receivedData.value}", style = MaterialTheme.typography.bodyMedium)
+            if (receivedData != null) {
+                Text(text = "Received Data: $receivedData", style = MaterialTheme.typography.bodyMedium)
             } else {
                 Text(text = "Reading data...", style = MaterialTheme.typography.bodyMedium)
                 LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
