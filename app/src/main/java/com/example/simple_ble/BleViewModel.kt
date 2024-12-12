@@ -173,32 +173,26 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
         }
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-            val data = characteristic.value
-            val dataStr = data?.joinToString("") { byte -> "%02x".format(byte) }
-            Log.w(TAG, "Characteristic changed: $dataStr")
+            val packet = characteristic.value
+            Log.w(TAG, "Received packet: ${packet.joinToString("") { "%02x".format(it) }}")
 
-            if (dataStr != null) {
-                try {
-                    // Decode the data into floats
-                    val decodedFloats = DataDecoder.decodeToFloats(dataStr)
+            try {
+                val decodedFloats = DataDecoder.processPacket(packet)
+                if (decodedFloats != null) {
                     Log.d(TAG, "Decoded Floats: $decodedFloats")
-
-                    // Convert the floats into a displayable string
                     val displayData = decodedFloats.joinToString(", ") { "%.2f".format(it) }
-
-                    // Update _receivedData with the decoded information
                     mainScope.launch {
                         _receivedData.value = displayData
-                        Log.d(TAG, "Updated _receivedData with decoded floats: $displayData")
                     }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Error decoding data: ${e.message}")
-                    mainScope.launch {
-                        _receivedData.value = "Error decoding data: ${e.message}"
-                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error processing packet: ${e.message}")
+                mainScope.launch {
+                    _receivedData.value = "Error processing packet: ${e.message}"
                 }
             }
         }
+
 
 
 
