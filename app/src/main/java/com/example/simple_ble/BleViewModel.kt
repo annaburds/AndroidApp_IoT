@@ -174,24 +174,50 @@ class BleViewModel(application: Application) : AndroidViewModel(application) {
 
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
             val packet = characteristic.value
-            Log.w(TAG, "Received packet: ${packet.joinToString("") { "%02x".format(it) }}")
+            Log.d("BleViewModel", "Received packet: ${packet.joinToString("") { "%02x".format(it) }}")
+
 
             try {
-                val decodedFloats = DataDecoder.processPacket(packet)
-                if (decodedFloats != null) {
-                    Log.d(TAG, "Decoded Floats: $decodedFloats")
-                    val displayData = decodedFloats.joinToString(", ") { "%.2f".format(it) }
+                // Pass the application context to the DataDecoder
+                val (nPeaks, decodedFloats) = DataDecoder.processPacket(getApplication(), packet)
+                //decodedFloats?.let { floats ->
+                //    mainScope.launch {
+                        // Combine new floats with existing data for continuous updates
+                //        val currentData = _receivedData.value.orEmpty()
+                //        val newData = (currentData.split(", ").mapNotNull { it.toFloatOrNull() } + floats)
+                //            .takeLast(200) // Keep only the last 200 points
+                //            .joinToString(", ") { "%.2f".format(it) }
+                //        _receivedData.value = newData
+                //    }
+                //}
+
+                    // Update UI for loading state or number of coughs
+                if (nPeaks == null && decodedFloats == null) {
+                    mainScope.launch {
+                        _receivedData.value = "Loading data from sensor"
+                    }
+                } else if (nPeaks != null) {
+                    mainScope.launch {
+                        _receivedData.value = "Number of Coughs: $nPeaks"
+                    }
+                }
+
+                // Update with decoded float data if available
+                decodedFloats?.let { floats ->
+                    val displayData = floats.joinToString(", ") { "%.2f".format(it) }
                     mainScope.launch {
                         _receivedData.value = displayData
                     }
                 }
             } catch (e: Exception) {
-                Log.e(TAG, "Error processing packet: ${e.message}")
+                Log.e("BleViewModel", "Error processing packet: ${e.message}")
                 mainScope.launch {
                     _receivedData.value = "Error processing packet: ${e.message}"
                 }
             }
         }
+
+
 
 
 
