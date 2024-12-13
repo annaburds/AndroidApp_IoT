@@ -163,9 +163,9 @@ class DataDisplayActivity : ComponentActivity() {
     @Composable
     fun LineChartViewMeh(data: List<Float>) {
         // Check if the data list size is 400
-        if (data.size != 400) {
-            throw IllegalArgumentException("Data size must be exactly 400. Received size: ${data.size}")
-        }
+        //if (data.size != 400) {
+        //    throw IllegalArgumentException("Data size must be exactly 400. Received size: ${data.size}")
+        //}
         // Remember a mutable state for animated data
         var animatedData by remember { mutableStateOf(emptyList<Float>()) }
 
@@ -226,9 +226,9 @@ class DataDisplayActivity : ComponentActivity() {
     @Composable
     fun LineChartView(data: List<Float>) {
         // Ensure data size is exactly 400
-        if (data.size != 400) {
-            throw IllegalArgumentException("Data size must be exactly 400. Received size: ${data.size}")
-        }
+        //if (data.size != 400) {
+        //    throw IllegalArgumentException("Data size must be exactly 400. Received size: ${data.size}")
+        //}
 
         // Remember a mutable state for animated data
         var animatedData by remember { mutableStateOf(emptyList<Float>()) }
@@ -240,6 +240,7 @@ class DataDisplayActivity : ComponentActivity() {
                 // Gradually add points with a delay to simulate real-time plotting
                 animatedData = animatedData + value
                 kotlinx.coroutines.delay(1L) // Adjust delay to match 1.6s animation for 400 points
+                //kotlinx.coroutines.delay()
             }
         }
 
