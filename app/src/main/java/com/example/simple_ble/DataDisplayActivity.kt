@@ -103,7 +103,7 @@ class DataDisplayActivity : ComponentActivity() {
     }
 
     @Composable
-    fun LineChartView(data: List<Float>) {
+    fun LineChartViewOld(data: List<Float>) {
         // Remember a mutable state for animated data
         var animatedData by remember { mutableStateOf(emptyList<Float>()) }
 
@@ -145,6 +145,133 @@ class DataDisplayActivity : ComponentActivity() {
             // Update chart data dynamically
             val entries = animatedData.mapIndexed { index, value ->
                 Entry(index * 0.8f / data.size, value) // Scale x-axis to 0.8 seconds
+            }
+
+            val dataSet = LineDataSet(entries, "Audio Signal")
+            dataSet.color = android.graphics.Color.BLUE
+            dataSet.setCircleColor(android.graphics.Color.RED)
+            dataSet.setDrawCircles(false)
+            dataSet.setDrawValues(false) // Disable point values on the chart
+
+            chart.data = LineData(dataSet)
+            chart.invalidate() // Refresh chart
+        }, modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp))
+    }
+
+    @Composable
+    fun LineChartViewMeh(data: List<Float>) {
+        // Check if the data list size is 400
+        if (data.size != 400) {
+            throw IllegalArgumentException("Data size must be exactly 400. Received size: ${data.size}")
+        }
+        // Remember a mutable state for animated data
+        var animatedData by remember { mutableStateOf(emptyList<Float>()) }
+
+        // Incrementally update the animatedData
+        LaunchedEffect(data) {
+            animatedData = emptyList() // Reset animation on new data
+            data.forEachIndexed { index, value ->
+                // Gradually add points with a delay to simulate real-time plotting
+                animatedData = animatedData + value
+                kotlinx.coroutines.delay(4L) // Adjust delay to match 1.6s animation for 400 points
+            }
+        }
+
+        AndroidView(factory = { context ->
+            val chart = LineChart(context)
+
+            // Customize static axes
+            chart.xAxis.apply {
+                axisMinimum = 0f
+                axisMaximum = 1.6f // Fixed X-axis for 1.6 seconds
+                setDrawLabels(true)
+                granularity = 0.2f // Label intervals every 0.2 seconds
+            }
+            chart.axisLeft.apply {
+                axisMinimum = -8f // Fixed Y-axis
+                axisMaximum = 8f
+                setDrawGridLines(true) // Optional: Show grid lines
+            }
+            chart.axisRight.isEnabled = false // Disable the right Y-axis
+            chart.legend.isEnabled = false
+
+            // Chart description
+            chart.description = Description().apply { text = "Time (s)" }
+
+            // Customize animation
+            chart.animateX(1600) // Animate X-axis over 1.6 seconds
+
+            chart
+        }, update = { chart ->
+            // Update chart data dynamically
+            val entries = animatedData.mapIndexed { index, value ->
+                Entry(index * 1.6f / 400, value) // Scale x-axis for 400 points over 1.6 seconds
+            }
+
+            val dataSet = LineDataSet(entries, "Audio Signal")
+            dataSet.color = android.graphics.Color.BLUE
+            dataSet.setCircleColor(android.graphics.Color.RED)
+            dataSet.setDrawCircles(false)
+            dataSet.setDrawValues(false) // Disable point values on the chart
+
+            chart.data = LineData(dataSet)
+            chart.invalidate() // Refresh chart
+        }, modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp))
+    }
+
+    @Composable
+    fun LineChartView(data: List<Float>) {
+        // Ensure data size is exactly 400
+        if (data.size != 400) {
+            throw IllegalArgumentException("Data size must be exactly 400. Received size: ${data.size}")
+        }
+
+        // Remember a mutable state for animated data
+        var animatedData by remember { mutableStateOf(emptyList<Float>()) }
+
+        // Incrementally update the animatedData
+        LaunchedEffect(data) {
+            animatedData = emptyList() // Reset animation on new data
+            data.forEachIndexed { index, value ->
+                // Gradually add points with a delay to simulate real-time plotting
+                animatedData = animatedData + value
+                kotlinx.coroutines.delay(1L) // Adjust delay to match 1.6s animation for 400 points
+            }
+        }
+
+        AndroidView(factory = { context ->
+            val chart = LineChart(context)
+
+            // Customize static axes
+            chart.xAxis.apply {
+                axisMinimum = 0f
+                axisMaximum = 1.6f // Fixed X-axis for 1.6 seconds
+                setDrawLabels(true)
+                granularity = 0.1f // Label intervals every 0.1 seconds
+            }
+            chart.axisLeft.apply {
+                axisMinimum = -30f // Fixed Y-axis
+                axisMaximum = 30f
+                setDrawGridLines(true) // Optional: Show grid lines
+            }
+            chart.axisRight.isEnabled = false // Disable the right Y-axis
+            chart.legend.isEnabled = false
+
+            // Chart description
+            chart.description = Description().apply { text = "Time (s)" }
+
+            // Customize animation
+            chart.animateX(1600) // Animate X-axis over 1.6 seconds
+
+            chart
+        }, update = { chart ->
+            // Correctly map data to the X-axis
+            val entries = animatedData.mapIndexed { index, value ->
+                Entry(index * (1.6f / 400), value) // Scale x-axis for 400 points over 1.6 seconds
             }
 
             val dataSet = LineDataSet(entries, "Audio Signal")
